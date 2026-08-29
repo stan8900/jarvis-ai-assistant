@@ -3,12 +3,103 @@
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
-[![AI](https://img.shields.io/badge/AI-Groq%20%7C%20Gemini-orange.svg)]()
+[![AI](https://img.shields.io/badge/AI-Ollama%20Local-orange.svg)]()
 
-> An advanced AI-powered virtual assistant with voice recognition, face authentication, phone integration, and intelligent automation capabilities.
+> Local-first JARVIS assistant fork: FastAPI, Ollama, faster-whisper, XTTS, Piper fallback, Redis memory, and a microphone-to-voice-response loop. No paid AI APIs required for the Sprint 1 core loop.
+
+## Sprint 1 - Core Conversation Loop
+
+Status: COMPLETE
+Dates: 28-29 August 2026
+
+Sprint 1 establishes the working local voice loop:
+
+```text
+Microphone -> faster-whisper -> FastAPI -> Ollama -> XTTS/Piper -> speaker
+```
+
+### Sprint 1 Backlog
+
+```text
+Task 1  - FastAPI skeleton          Done
+Task 2  - Ollama client             Done
+Task 3  - Redis memory              Done
+Task 4  - faster-whisper STT        Done
+Task 5  - XTTS voice clone          Done
+Task 5b - Piper TTS fallback        Done
+Task 6  - Voice loop CLI            Done
+Task 7  - Dependencies              Done
+Task 8  - Basic tests               Done
+Persistent warm XTTS worker         Done
+JARVIS personality prompt           Done
+Custom voice reference              Done
+```
+
+### Current Local Stack
+
+- Backend: FastAPI
+- LLM: Ollama with `llama3.2:1b`
+- STT: `faster-whisper`
+- Primary TTS: XTTS using `data/voices/jarvis_reference.wav`
+- TTS fallback: Piper `en_GB-alan-medium`
+- Memory: Redis short-term memory with silent in-memory fallback
+- CLI: `python -m app.cli.voice_loop`
+
+### Sprint 1 Runbook
+
+Terminal 1:
+
+```bash
+export OLLAMA_MODELS=/Volumes/USB/jarvis-cache/ollama
+ollama serve
+```
+
+Terminal 2:
+
+```bash
+cd /Users/mukhammadsultanjurabekov/Desktop/Projects/Chattingwebsite/untitled\ folder/jarvis-ai-assistant
+source .venv/bin/activate
+
+export COQUI_TOS_AGREED=1
+export XDG_CACHE_HOME=/Volumes/USB/jarvis-cache
+export JARVIS_TTS_PROVIDER=xtts
+export JARVIS_XTTS_WARM=true
+export JARVIS_VOICE_ID=jarvis
+export JARVIS_XTTS_PYTHON=/Volumes/USB/jarvis-cache/xtts-venv/bin/python
+export JARVIS_OLLAMA_BASE_URL=http://127.0.0.1:11434
+export JARVIS_OLLAMA_MODEL=llama3.2:1b
+
+python -m uvicorn app.main:app
+```
+
+Wait for `Application startup complete` before starting the voice loop.
+
+Terminal 3:
+
+```bash
+cd /Users/mukhammadsultanjurabekov/Desktop/Projects/Chattingwebsite/untitled\ folder/jarvis-ai-assistant
+source .venv/bin/activate
+python -m app.cli.voice_loop
+```
+
+### Sprint 1 Verification
+
+- `/api/health` returns `OK`
+- `/api/chat/text` returns an Ollama response
+- `/api/chat/audio` accepts WAV uploads and returns transcript, response, and `audio_base64`
+- `/api/voice/speak` returns `audio/wav`
+- Warm XTTS benchmark after startup: roughly 7-9 seconds per synthesis on this machine
+- Piper fallback benchmark: sub-second synthesis after warm-up
+
+See [SPRINT_1.md](SPRINT_1.md) for the focused sprint log.
+
+The original upstream project documentation continues below. This fork is being
+upgraded toward a fully local personal assistant, so Sprint 1 is the current
+source of truth for the active backend and voice loop.
 
 ## 📋 Table of Contents
 
+- [Sprint 1 - Core Conversation Loop](#sprint-1---core-conversation-loop)
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)

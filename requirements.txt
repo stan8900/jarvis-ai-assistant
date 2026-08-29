@@ -1,4 +1,9 @@
 # Core Dependencies
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+httpx==0.28.1
+redis==5.2.1
+python-multipart==0.0.20
 pyttsx3==2.90
 speechrecognition==3.10.0
 pyaudio==0.2.11
@@ -8,8 +13,12 @@ eel==0.16.0
 # AI & Machine Learning
 groq==0.4.1
 google-generativeai==0.3.2
-transformers==4.35.2
+transformers==4.36.2
 torch==2.1.1
+torchaudio==2.1.1
+TTS==0.22.0
+faster-whisper==1.1.1
+piper-tts==1.7.0
 numpy==1.24.3
 
 # Computer Vision & Image Processing
@@ -29,6 +38,7 @@ qrcode==7.4.2
 # Audio & Media
 pygame==2.5.2
 gtts==2.4.0
+sounddevice==0.5.1
 
 # Optional Dependencies
 pvporcupine==3.0.0

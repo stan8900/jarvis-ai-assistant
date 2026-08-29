@@ -132,6 +132,10 @@ dmypy.json
 
 # JARVIS Specific Files
 
+data/voices/
+data/audio_cache/
+data/logs/
+
 # API Keys and Credentials (CRITICAL - NEVER COMMIT)
 groq_config.py
 gemini_config.py
