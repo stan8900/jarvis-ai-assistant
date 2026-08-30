@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.integrations.brief import get_morning_brief
+from app.integrations.search import web_search
 from app.integrations.weather import get_weather
 
 
@@ -21,7 +23,10 @@ class ToolRouter:
         if self._is_weather_request(normalized):
             return ToolResult(name="weather", content=await get_weather())
         if self._is_morning_brief_request(normalized):
-            return ToolResult(name="morning_brief", content=get_morning_brief())
+            return ToolResult(name="morning_brief", content=await get_morning_brief())
+        search_query = self._extract_search_query(normalized)
+        if search_query:
+            return ToolResult(name="search", content=await web_search(search_query))
 
         return None
 
@@ -64,11 +69,31 @@ class ToolRouter:
     @staticmethod
     def _is_morning_brief_request(message: str) -> bool:
         return (
-            "morning brief" in message
+            "good morning" in message
+            or "good afternoon" in message
+            or "good evening" in message
+            or "morning brief" in message
             or "what's my plan" in message
             or "whats my plan" in message
             or "what is my plan" in message
+            or "what should i focus on" in message
         )
+
+    @staticmethod
+    def _extract_search_query(message: str) -> str | None:
+        prefixes = (
+            "search for ",
+            "look up ",
+            "find out ",
+            "what is ",
+            "who is ",
+            "tell me about ",
+        )
+        for prefix in prefixes:
+            if message.startswith(prefix):
+                query = message.removeprefix(prefix).strip()
+                return query or None
+        return None
 
 
 def get_current_time(now: datetime | None = None) -> str:
@@ -79,10 +104,6 @@ def get_current_time(now: datetime | None = None) -> str:
 def get_current_date(now: datetime | None = None) -> str:
     current = now or datetime.now()
     return f"{current:%A} the {_ordinal(current.day)} of {current:%B}, sir."
-
-
-def get_morning_brief() -> str:
-    return "Morning brief not yet configured, sir."
 
 
 def _ordinal(day: int) -> str:

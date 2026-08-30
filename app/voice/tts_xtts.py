@@ -182,6 +182,7 @@ class XTTSVoice(TextToSpeech):
         self.device = device
         self.worker_python = worker_python or os.getenv("JARVIS_XTTS_PYTHON")
         self._warm_worker: WarmXTTSWorker | None = None
+        self._audio_cache: dict[tuple[str, str], bytes] = {}
 
     @cached_property
     def _model(self):
@@ -214,9 +215,15 @@ class XTTSVoice(TextToSpeech):
             logger.error("XTTS voice reference not found or empty: %s", voice_path)
             return None
 
+        cache_key = (resolved_voice_id, clean_text)
+        cached_audio = self._audio_cache.get(cache_key)
+        if cached_audio is not None:
+            return cached_audio
+
         if self.warm_worker and self.worker_python:
             audio = self._get_warm_worker().synthesize(clean_text, voice_path)
             if audio is not None:
+                self._cache_audio(cache_key, audio)
                 return audio
             logger.error("Warm XTTS worker unavailable; falling back to one-shot worker.")
 
@@ -238,7 +245,9 @@ class XTTSVoice(TextToSpeech):
                 file_path=output_path,
             )
             with open(output_path, "rb") as audio_file:
-                return audio_file.read()
+                audio = audio_file.read()
+            self._cache_audio(cache_key, audio)
+            return audio
         except Exception as exc:
             logger.error("XTTS synthesis failed: %s", exc)
             return None
@@ -324,7 +333,9 @@ class XTTSVoice(TextToSpeech):
                 )
                 return None
             with open(output_path, "rb") as audio_file:
-                return audio_file.read()
+                audio = audio_file.read()
+            self._cache_audio((self.default_voice_id, text), audio)
+            return audio
         except Exception as exc:
             logger.error("XTTS worker synthesis failed: %s", exc)
             return None
@@ -334,3 +345,9 @@ class XTTSVoice(TextToSpeech):
                     os.remove(output_path)
                 except OSError:
                     pass
+
+    def _cache_audio(self, cache_key: tuple[str, str], audio: bytes) -> None:
+        self._audio_cache[cache_key] = audio
+        while len(self._audio_cache) > 20:
+            oldest_key = next(iter(self._audio_cache))
+            self._audio_cache.pop(oldest_key, None)
