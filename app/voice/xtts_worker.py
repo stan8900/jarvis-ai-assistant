@@ -42,8 +42,14 @@ def detect_device() -> str:
 
 
 def prepare_environment() -> None:
-    if not os.getenv("TTS_HOME") and os.getenv("XDG_CACHE_HOME"):
-        os.environ["TTS_HOME"] = str(Path(os.environ["XDG_CACHE_HOME"]) / "tts-home")
+    cache_home = Path(os.getenv("XDG_CACHE_HOME") or "/Volumes/USB/jarvis-cache")
+    if cache_home.exists():
+        os.environ.setdefault("XDG_CACHE_HOME", str(cache_home))
+        os.environ.setdefault("HF_HOME", str(cache_home / "huggingface"))
+        os.environ.setdefault("TORCH_HOME", str(cache_home / "torch"))
+        os.environ.setdefault("TTS_HOME", str(cache_home / "tts-home"))
+        os.environ.setdefault("NUMBA_CACHE_DIR", str(cache_home / "numba"))
+        os.environ.setdefault("MPLCONFIGDIR", str(cache_home / "matplotlib"))
 
     disable_numba_disk_cache()
 

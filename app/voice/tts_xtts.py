@@ -18,8 +18,11 @@ logger = logging.getLogger(__name__)
 def build_worker_env() -> dict[str, str]:
     env = os.environ.copy()
     env.setdefault("COQUI_TOS_AGREED", "1")
-    if env.get("XDG_CACHE_HOME"):
-        cache_home = Path(env["XDG_CACHE_HOME"])
+    cache_home = Path(env.get("XDG_CACHE_HOME") or "/Volumes/USB/jarvis-cache")
+    if cache_home.exists():
+        env.setdefault("XDG_CACHE_HOME", str(cache_home))
+        env.setdefault("HF_HOME", str(cache_home / "huggingface"))
+        env.setdefault("TORCH_HOME", str(cache_home / "torch"))
         env.setdefault("TTS_HOME", str(cache_home / "tts-home"))
         env.setdefault("NUMBA_CACHE_DIR", str(cache_home / "numba"))
         env.setdefault("MPLCONFIGDIR", str(cache_home / "matplotlib"))
