@@ -117,3 +117,59 @@ Editable config:
   "location": "London"
 }
 ```
+
+## Task 5 - Calendar Integration
+
+Status: Done
+
+JARVIS now reads a local calendar from `data/calendar/events.json`, routes
+calendar questions before Ollama, and includes today's schedule in the morning
+brief. This keeps Sprint 2 self-hosted and avoids OAuth/API setup until it is
+needed.
+
+Implemented triggers:
+
+```text
+"calendar"
+"schedule today"
+"what meetings do I have"
+"what's on my schedule"
+"what's on my calendar"
+```
+
+Editable calendar:
+
+```json
+{
+  "events": [
+    {
+      "title": "JARVIS Sprint 2",
+      "date": "2026-08-31",
+      "start_time": "10:00",
+      "end_time": "12:00"
+    }
+  ]
+}
+```
+
+## Task 6 - Long-Term Memory Foundation
+
+Status: Foundation done
+
+JARVIS now has a PostgreSQL-ready long-term memory module for interaction
+logging. It creates an `interactions` table when PostgreSQL is available and
+falls back to in-memory storage if the driver or database is unavailable, so the
+assistant never crashes because long-term memory is offline.
+
+Configuration:
+
+```text
+JARVIS_POSTGRES_URL=postgresql://jarvis:jarvis@localhost:5432/jarvis
+```
+
+Initial schema:
+
+```text
+interactions(id, session_id, user_id, user_message, assistant_response,
+tool_name, created_at)
+```

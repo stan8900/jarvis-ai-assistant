@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.integrations.brief import get_morning_brief
+from app.integrations.calendar import get_today_calendar
 from app.integrations.search import web_search
 from app.integrations.weather import get_weather
 
@@ -24,6 +25,8 @@ class ToolRouter:
             return ToolResult(name="weather", content=await get_weather())
         if self._is_morning_brief_request(normalized):
             return ToolResult(name="morning_brief", content=await get_morning_brief())
+        if self._is_calendar_request(normalized):
+            return ToolResult(name="calendar", content=await get_today_calendar())
         search_query = self._extract_search_query(normalized)
         if search_query:
             return ToolResult(name="search", content=await web_search(search_query))
@@ -77,6 +80,20 @@ class ToolRouter:
             or "whats my plan" in message
             or "what is my plan" in message
             or "what should i focus on" in message
+        )
+
+    @staticmethod
+    def _is_calendar_request(message: str) -> bool:
+        return (
+            "calendar" in message
+            or "schedule today" in message
+            or "what meetings do i have" in message
+            or "what's on my schedule" in message
+            or "whats on my schedule" in message
+            or "what is on my schedule" in message
+            or "what's on my calendar" in message
+            or "whats on my calendar" in message
+            or "what is on my calendar" in message
         )
 
     @staticmethod

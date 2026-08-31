@@ -1,0 +1,22 @@
+{
+  "events": [
+    {
+      "title": "JARVIS Sprint 2",
+      "date": "2026-08-31",
+      "start_time": "10:00",
+      "end_time": "12:00"
+    },
+    {
+      "title": "Job applications",
+      "date": "2026-08-31",
+      "start_time": "14:00",
+      "end_time": "15:30"
+    },
+    {
+      "title": "Linear algebra review",
+      "date": "2026-08-31",
+      "start_time": "18:00",
+      "end_time": "19:00"
+    }
+  ]
+}

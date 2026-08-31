@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from app.integrations.calendar import get_today_event_summary
 from app.integrations.weather import get_weather
 
 
@@ -30,9 +31,10 @@ async def get_morning_brief() -> str:
     greeting = _time_greeting(now)
     date_str = now.strftime("%a %d %b")
     weather = _compact_weather(_strip_terminal_sir(await get_weather()))
+    calendar = get_today_event_summary(now, compact=True)
     task_str = _format_tasks([_compact_task(str(task)) for task in tasks])
 
-    return f"{greeting} {date_str}. {weather}. Focus: {task_str}."
+    return f"{greeting} {date_str}. {weather}. Calendar: {calendar}. Focus: {task_str}."
 
 
 def load_brief_config(path: Path = BRIEF_CONFIG_PATH) -> dict[str, Any]:

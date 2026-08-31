@@ -8,6 +8,10 @@ class Settings:
     ollama_model: str = os.getenv("JARVIS_OLLAMA_MODEL", "llama3.2:1b")
     request_timeout_seconds: float = float(os.getenv("JARVIS_REQUEST_TIMEOUT_SECONDS", "60"))
     redis_url: str = os.getenv("JARVIS_REDIS_URL", "redis://localhost:6379/0")
+    postgres_url: str = os.getenv(
+        "JARVIS_POSTGRES_URL",
+        "postgresql://jarvis:jarvis@localhost:5432/jarvis",
+    )
     whisper_model: str = os.getenv("JARVIS_WHISPER_MODEL", "base.en")
     xtts_model: str = os.getenv(
         "JARVIS_XTTS_MODEL",
