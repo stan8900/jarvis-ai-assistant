@@ -5,8 +5,8 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Settings:
     ollama_base_url: str = os.getenv("JARVIS_OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_model: str = os.getenv("JARVIS_OLLAMA_MODEL", "llama3.2:1b")
-    request_timeout_seconds: float = float(os.getenv("JARVIS_REQUEST_TIMEOUT_SECONDS", "60"))
+    ollama_model: str = os.getenv("JARVIS_OLLAMA_MODEL", "llama3.1:8b")
+    request_timeout_seconds: float = float(os.getenv("JARVIS_REQUEST_TIMEOUT_SECONDS", "120"))
     redis_url: str = os.getenv("JARVIS_REDIS_URL", "redis://localhost:6379/0")
     postgres_url: str = os.getenv(
         "JARVIS_POSTGRES_URL",
