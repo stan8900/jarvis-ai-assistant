@@ -152,14 +152,15 @@ Editable calendar:
 }
 ```
 
-## Task 6 - Long-Term Memory Foundation
+## Task 6 - Long-Term Memory
 
-Status: Foundation done
+Status: Done
 
-JARVIS now has a PostgreSQL-ready long-term memory module for interaction
-logging. It creates an `interactions` table when PostgreSQL is available and
-falls back to in-memory storage if the driver or database is unavailable, so the
-assistant never crashes because long-term memory is offline.
+JARVIS now has real PostgreSQL-backed long-term memory. It creates `facts` and
+`interactions` tables on startup, stores remembered facts with upsert semantics,
+recalls saved facts after restart, and logs every user and assistant turn. If
+PostgreSQL is unavailable, it falls back to in-memory storage so the assistant
+keeps running.
 
 Configuration:
 
@@ -170,6 +171,47 @@ JARVIS_POSTGRES_URL=postgresql://jarvis:jarvis@localhost:5432/jarvis
 Initial schema:
 
 ```text
-interactions(id, session_id, user_id, user_message, assistant_response,
-tool_name, created_at)
+facts(id, key, value, created_at, updated_at)
+interactions(id, session_id, role, content, tool_used, created_at)
+```
+
+Implemented triggers:
+
+```text
+"remember that"
+"don't forget"
+"note that"
+"what do you know about me"
+"what do you remember about me"
+```
+
+## Task 7 - IDE Control
+
+Status: Done
+
+JARVIS now routes IDE commands to local process controls for VS Code,
+Antigravity IDE, and the FastAPI server. File opening searches the project tree
+and skips virtualenv, cache, and Git directories. IDE actions skip TTS so they
+return immediately.
+
+Implemented triggers:
+
+```text
+"open VS Code"
+"open vscode"
+"open Antigravity"
+"open Antigravity IDE"
+"open file"
+"open the"
+"start the server"
+"run the server"
+```
+
+Examples:
+
+```text
+Jarvis open VS Code        -> Opening VS Code, sir.
+Jarvis open Antigravity    -> Opening Antigravity IDE, sir.
+Jarvis open the tool router -> Opening tool_router.py, sir.
+Jarvis start the server    -> Starting the server, sir.
 ```

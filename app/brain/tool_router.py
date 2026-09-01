@@ -3,8 +3,10 @@ from datetime import datetime
 
 from app.integrations.brief import get_morning_brief
 from app.integrations.calendar import get_today_calendar
+from app.integrations.ide import open_antigravity, open_file, open_vscode, run_server
 from app.integrations.search import web_search
 from app.integrations.weather import get_weather
+from app.memory.long_term_memory import LongTermMemory
 
 
 @dataclass(frozen=True)
@@ -14,13 +16,31 @@ class ToolResult:
 
 
 class ToolRouter:
-    async def route(self, message: str) -> ToolResult | None:
+    async def route(
+        self,
+        message: str,
+        long_term_memory: LongTermMemory | None = None,
+    ) -> ToolResult | None:
         normalized = self._normalize(message)
 
+        remember_fact = self._extract_remember_fact(normalized)
+        if remember_fact is not None:
+            key, value = remember_fact
+            if long_term_memory is not None:
+                long_term_memory.remember(key, value)
+            return ToolResult(name="memory", content=f"Noted, sir. {value}.")
+        if self._is_recall_all_request(normalized):
+            return ToolResult(
+                name="memory",
+                content=self._format_recalled_facts(long_term_memory),
+            )
         if self._is_time_request(normalized):
             return ToolResult(name="time", content=get_current_time())
         if self._is_date_request(normalized):
             return ToolResult(name="date", content=get_current_date())
+        ide_result = self._route_ide(normalized)
+        if ide_result is not None:
+            return ide_result
         if self._is_weather_request(normalized):
             return ToolResult(name="weather", content=await get_weather())
         if self._is_morning_brief_request(normalized):
@@ -97,6 +117,25 @@ class ToolRouter:
         )
 
     @staticmethod
+    def _route_ide(message: str) -> ToolResult | None:
+        if message in {"open vs code", "open vscode", "launch vs code", "launch vscode"}:
+            return ToolResult(name="ide", content=open_vscode())
+        if message in {
+            "open antigravity",
+            "open antigravity ide",
+            "launch antigravity",
+            "launch antigravity ide",
+        }:
+            return ToolResult(name="ide", content=open_antigravity())
+        if message in {"start the server", "run the server", "start server", "run server"}:
+            return ToolResult(name="ide", content=run_server())
+
+        filename = _extract_open_filename(message)
+        if filename:
+            return ToolResult(name="ide", content=open_file(filename))
+        return None
+
+    @staticmethod
     def _extract_search_query(message: str) -> str | None:
         prefixes = (
             "search for ",
@@ -111,6 +150,41 @@ class ToolRouter:
                 query = message.removeprefix(prefix).strip()
                 return query or None
         return None
+
+    @staticmethod
+    def _extract_remember_fact(message: str) -> tuple[str, str] | None:
+        prefixes = (
+            "remember that ",
+            "don't forget ",
+            "dont forget ",
+            "note that ",
+        )
+        for prefix in prefixes:
+            if not message.startswith(prefix):
+                continue
+            fact = message.removeprefix(prefix).strip()
+            if not fact:
+                return None
+            return _fact_key_from_text(fact), _format_fact_value(fact)
+        return None
+
+    @staticmethod
+    def _is_recall_all_request(message: str) -> bool:
+        return (
+            "what do you know about me" in message
+            or "what do you remember about me" in message
+            or "what have you remembered" in message
+        )
+
+    @staticmethod
+    def _format_recalled_facts(long_term_memory: LongTermMemory | None) -> str:
+        if long_term_memory is None:
+            return "I do not have long-term memory connected, sir."
+        facts = long_term_memory.recall_all(limit=8)
+        if not facts:
+            return "I have no stored facts yet, sir."
+        fact_text = "; ".join(fact.value for fact in facts)
+        return f"I remember: {fact_text}, sir."
 
 
 def get_current_time(now: datetime | None = None) -> str:
@@ -129,3 +203,45 @@ def _ordinal(day: int) -> str:
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return f"{day}{suffix}"
+
+
+def _fact_key_from_text(text: str) -> str:
+    clean = text.strip().lower()
+    replacements = (
+        ("my ", ""),
+        ("i ", ""),
+        ("am ", ""),
+        ("is ", ""),
+    )
+    for old, new in replacements:
+        if clean.startswith(old):
+            clean = clean.replace(old, new, 1)
+    splitters = (" is ", " are ", " am ", " at ", " every ", " daily")
+    for splitter in splitters:
+        if splitter in clean:
+            return clean.split(splitter, 1)[0].strip()
+    return " ".join(clean.split()[:6])
+
+
+def _format_fact_value(text: str) -> str:
+    clean = text.strip()
+    if not clean:
+        return clean
+    if clean.lower().startswith("my "):
+        clean = clean[3:].strip()
+    return clean[0].upper() + clean[1:]
+
+
+def _extract_open_filename(message: str) -> str | None:
+    prefixes = (
+        "open file ",
+        "open the file ",
+        "open the ",
+        "open ",
+    )
+    for prefix in prefixes:
+        if message.startswith(prefix):
+            target = message.removeprefix(prefix).strip()
+            if target not in {"vs code", "vscode"}:
+                return target or None
+    return None

@@ -33,13 +33,16 @@ class ConversationOrchestrator:
         user_id: str = "sultan",
     ) -> dict[str, str]:
         clean_message = message.strip()
-        tool_result = await self.tool_router.route(clean_message)
+        tool_result = await self.tool_router.route(
+            clean_message,
+            long_term_memory=self.long_term_memory,
+        )
         if tool_result is not None:
             response = tool_result.content
             self.memory.add_message(session_id, "user", clean_message)
             self.memory.add_message(session_id, "assistant", response)
             audio = None
-            if self.tts is not None:
+            if self.tts is not None and tool_result.name != "ide":
                 audio = self.tts.synthesize(response)
             self._remember_long_term(
                 session_id=session_id,
@@ -57,9 +60,20 @@ class ConversationOrchestrator:
             }
 
         recent_context = self.memory.get_context(session_id)
+        remembered_facts = (
+            self.long_term_memory.facts_context()
+            if self.long_term_memory is not None
+            else ""
+        )
         response = await self.llm.chat(
             messages=[
-                {"role": "system", "content": build_system_prompt(user_id=user_id)},
+                {
+                    "role": "system",
+                    "content": build_system_prompt(
+                        user_id=user_id,
+                        remembered_facts=remembered_facts,
+                    ),
+                },
                 *self._to_llm_messages(recent_context),
                 {"role": "user", "content": clean_message},
             ]
@@ -102,12 +116,12 @@ class ConversationOrchestrator:
     ) -> None:
         if self.long_term_memory is None:
             return
-        self.long_term_memory.add_interaction(
-            session_id=session_id,
-            user_id=user_id,
-            user_message=user_message,
-            assistant_response=assistant_response,
-            tool_name=tool_name,
+        self.long_term_memory.log_interaction(session_id, "user", user_message, tool_name)
+        self.long_term_memory.log_interaction(
+            session_id,
+            "assistant",
+            assistant_response,
+            tool_name,
         )
 
 
