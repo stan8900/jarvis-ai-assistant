@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 
 from app.brain.orchestrator import ConversationOrchestrator, get_orchestrator
 from app.core.config import get_settings
+from app.llm.multi_brain import BrainError
 from app.llm.ollama_client import OllamaError
 from app.api.routes_voice import get_tts
 from app.voice.stt_base import STTError, SpeechToText
@@ -61,6 +62,11 @@ async def chat_text(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+    except BrainError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     audio = result.pop("audio", None)
     return TextChatResponse(
@@ -101,6 +107,11 @@ async def chat_audio(
             detail=str(exc),
         ) from exc
     except OllamaError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except BrainError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),

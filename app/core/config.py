@@ -2,10 +2,34 @@ import os
 from dataclasses import dataclass
 
 
+def _load_local_env(path: str = ".env") -> None:
+    if not os.path.exists(path):
+        return
+
+    try:
+        with open(path, encoding="utf-8") as env_file:
+            for line in env_file:
+                clean_line = line.strip()
+                if not clean_line or clean_line.startswith("#") or "=" not in clean_line:
+                    continue
+                key, value = clean_line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+    except OSError:
+        return
+
+
+_load_local_env()
+
+
 @dataclass(frozen=True)
 class Settings:
     ollama_base_url: str = os.getenv("JARVIS_OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model: str = os.getenv("JARVIS_OLLAMA_MODEL", "llama3.1:8b")
+    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
+    anthropic_model: str = os.getenv("JARVIS_ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    openai_model: str = os.getenv("JARVIS_OPENAI_MODEL", "gpt-4o-mini")
+    default_brain: str = os.getenv("JARVIS_DEFAULT_BRAIN", "claude")
     request_timeout_seconds: float = float(os.getenv("JARVIS_REQUEST_TIMEOUT_SECONDS", "120"))
     redis_url: str = os.getenv("JARVIS_REDIS_URL", "redis://localhost:6379/0")
     postgres_url: str = os.getenv(
