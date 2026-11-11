@@ -4,7 +4,7 @@ from __future__ import annotations
 def select_brain(
     user_message: str,
     tool_used: str | None = None,
-    default_brain: str = "claude",
+    default_brain: str = "ollama",
 ) -> str:
     """
     Decide which brain should handle normal conversation.
@@ -21,16 +21,6 @@ def select_brain(
             message_lower = message_lower[len(wake_word) :].strip()
             break
 
-    openai_triggers = [
-        "write me",
-        "draft",
-        "creative",
-        "story",
-        "email",
-    ]
-    if any(trigger in message_lower for trigger in openai_triggers):
-        return "openai"
-
     simple_factual_starts = (
         "what is ",
         "who is ",
@@ -46,26 +36,4 @@ def select_brain(
     ):
         return "ollama"
 
-    complex_triggers = [
-        "help me",
-        "advice",
-        "should i",
-        "what do you think",
-        "explain",
-        "how do i",
-        "interview",
-        "career",
-        "write",
-        "analyse",
-        "analyze",
-        "compare",
-        "plan",
-        "strategy",
-        "jarvis think",
-    ]
-    if any(trigger in message_lower for trigger in complex_triggers):
-        return "claude"
-
-    if default_brain in {"claude", "openai", "ollama"}:
-        return default_brain
-    return "claude"
+    return "ollama"

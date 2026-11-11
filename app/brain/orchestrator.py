@@ -11,9 +11,7 @@ from app.llm.base import LLMClient
 from app.llm.brain_selector import select_brain
 from app.llm.multi_brain import (
     MissingBrainKeyError,
-    ask_claude,
     ask_ollama,
-    ask_openai,
 )
 from app.memory.long_term_memory import LongTermMemory
 from app.memory.redis_memory import RedisMemory
@@ -43,12 +41,27 @@ class ConversationOrchestrator:
         message: str,
         session_id: str = "default",
         user_id: str = "sultan",
+        schedule_owner: str | None = None,
     ) -> dict[str, str]:
         clean_message = message.strip()
         started_at = perf_counter()
+        # Keep simple voice greetings natural and deterministic on small local
+        # models, rather than sending them through a long-context prompt.
+        if clean_message.casefold().strip(" !,.?") in {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}:
+            response = "Hello, Sultan. I’m here and ready to help. How are you?"
+            self.memory.add_message(session_id, "user", clean_message)
+            self.memory.add_message(session_id, "assistant", response)
+            return {
+                "response": response,
+                "session_id": session_id,
+                "user_id": user_id,
+                "model": "local:greeting",
+                "audio": None,
+            }
         tool_result = await self.tool_router.route(
             clean_message,
             long_term_memory=self.long_term_memory,
+            owner_id=schedule_owner,
         )
         if tool_result is not None:
             response = tool_result.content
@@ -154,22 +167,6 @@ class ConversationOrchestrator:
         settings,
     ) -> tuple[str, str]:
         try:
-            if brain == "claude":
-                response = await ask_claude(
-                    messages=messages,
-                    system=system_prompt,
-                    api_key=settings.anthropic_api_key,
-                    model=settings.anthropic_model,
-                )
-                return response, "claude"
-            if brain == "openai":
-                response = await ask_openai(
-                    messages=messages,
-                    system=system_prompt,
-                    api_key=settings.openai_api_key,
-                    model=settings.openai_model,
-                )
-                return response, "openai"
             response = await ask_ollama(
                 messages=messages,
                 system=system_prompt,
@@ -179,24 +176,7 @@ class ConversationOrchestrator:
             )
             return response, "ollama"
         except MissingBrainKeyError as exc:
-            logger.warning("%s Trying next available brain.", exc)
-            if brain == "claude" and settings.openai_api_key:
-                response = await ask_openai(
-                    messages=messages,
-                    system=system_prompt,
-                    api_key=settings.openai_api_key,
-                    model=settings.openai_model,
-                )
-                return response, "openai"
-            if brain == "openai" and settings.anthropic_api_key:
-                response = await ask_claude(
-                    messages=messages,
-                    system=system_prompt,
-                    api_key=settings.anthropic_api_key,
-                    model=settings.anthropic_model,
-                )
-                return response, "claude"
-
+            logger.warning("%s Falling back to Ollama.", exc)
             response = await ask_ollama(
                 messages=messages,
                 system=system_prompt,

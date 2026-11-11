@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>JARVIS Island</string>
+<key>CFBundleIdentifier</key><string>local.jarvis.island</string>
+<key>CFBundleExecutable</key><string>JarvisIsland</string>
+<key>NSMicrophoneUsageDescription</key><string>JARVIS needs microphone access so you can speak to it.</string>
+<key>NSSpeechRecognitionUsageDescription</key><string>JARVIS uses macOS speech recognition to understand your voice.</string>
+<key>LSUIElement</key><true/>
+</dict></plist>

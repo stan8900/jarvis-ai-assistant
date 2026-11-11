@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Island</title>
+  <style>
+    :root { color-scheme: dark; --cyan:#72e7ff; --ink:#071018; --muted:#91a6b2; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; overflow:hidden; font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:radial-gradient(circle at 50% 44%,#183746 0,#071018 31%,#020508 72%); color:#eafaff; }
+    .island { width:min(92vw,430px); min-height:470px; padding:30px 26px 24px; display:flex; flex-direction:column; align-items:center; gap:22px; border:1px solid #325263; border-radius:42px; background:linear-gradient(145deg,rgba(17,35,46,.92),rgba(2,8,12,.94)); box-shadow:0 28px 90px #000b, inset 0 1px #ffffff16; }
+    .top { width:100%; display:flex; align-items:center; justify-content:space-between; color:var(--muted); letter-spacing:.08em; font-size:11px; text-transform:uppercase; }
+    .brand { color:#eafaff; letter-spacing:.25em; font-weight:700; }
+    .state { display:flex; align-items:center; gap:7px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:#35e6a1; box-shadow:0 0 13px #35e6a1; }
+    .dot.offline { background:#ff7b91; box-shadow:0 0 13px #ff7b91; }
+    .dial { width:238px; height:238px; margin-top:9px; display:grid; place-items:center; position:relative; border-radius:50%; background:conic-gradient(from 205deg,transparent 0 14%,#397286 20%,#72e7ff 47%,#397286 73%,transparent 82%); box-shadow:0 0 32px #3dd8ff3a; animation: breathe 3.2s ease-in-out infinite; }
+    .dial::before { content:""; position:absolute; inset:8px; border-radius:50%; background:radial-gradient(circle at 50% 38%,#193b4b,#09151d 64%,#050b10); border:1px solid #77e9ff88; box-shadow:inset 0 0 28px #000; }
+    .dial::after { content:""; position:absolute; inset:20px; border-radius:50%; border:1px solid #8befff2a; }
+    .core { z-index:1; width:92px; height:92px; border-radius:50%; display:grid; place-items:center; border:1px solid #b5f5ff; background:radial-gradient(circle,#aaf4ff 0 3%,#28768c 10%,#0d2732 54%,#061015 70%); box-shadow:0 0 26px #71e7ff99, inset 0 0 20px #8defff66; cursor:pointer; transition:.2s transform,.2s box-shadow; }
+    .core:hover { transform:scale(1.05); box-shadow:0 0 40px #71e7ffdd, inset 0 0 20px #8defff88; }
+    .core.listening { animation: listen .8s ease-in-out infinite alternate; }
+    .mic { width:18px; height:27px; border:2px solid white; border-radius:12px; position:relative; }
+    .mic::before { content:""; position:absolute; left:-7px; top:14px; width:28px; height:17px; border:2px solid white; border-top:0; border-radius:0 0 17px 17px; }
+    .mic::after { content:""; position:absolute; left:6px; bottom:-9px; width:2px; height:8px; background:white; box-shadow:-6px 8px 0 -0px white,6px 8px 0 -0px white; }
+    .status { min-height:22px; color:var(--cyan); letter-spacing:.12em; text-transform:uppercase; font-size:11px; text-align:center; }
+    .message { width:100%; min-height:68px; padding:13px 16px; border:1px solid #ffffff16; border-radius:18px; color:#d8edf2; line-height:1.45; text-align:center; background:#ffffff07; }
+    .composer { width:100%; display:flex; gap:8px; }
+    input { min-width:0; flex:1; border:1px solid #ffffff1c; border-radius:14px; padding:12px 13px; outline:none; color:white; background:#0008; }
+    input:focus { border-color:#72e7ff99; }
+    button.send { border:1px solid #72e7ff77; border-radius:14px; padding:0 16px; color:#dffbff; background:#125267; cursor:pointer; }
+    .hint { color:#6f8793; font-size:11px; text-align:center; }
+    @keyframes breathe { 50% { transform:scale(1.015); filter:brightness(1.15); } }
+    @keyframes listen { to { transform:scale(1.12); box-shadow:0 0 55px #71e7ffff, inset 0 0 25px #8defffaa; } }
+  </style>
+</head>
+<body>
+  <main class="island" aria-label="JARVIS voice island">
+    <div class="top"><span class="brand">J.A.R.V.I.S</span><span class="state"><i class="dot offline" id="dot"></i><span id="online">checking</span></span></div>
+    <div class="dial"><button class="core" id="mic" aria-label="Speak to JARVIS"><span class="mic"></span></button></div>
+    <div class="status" id="status">ready</div>
+    <div class="message" id="message">Tap the dial and speak, or type below.</div>
+    <form class="composer" id="composer"><input id="text" autocomplete="off" placeholder="Talk to JARVIS…"><button class="send">Send</button></form>
+    <div class="hint">Click the dial • press Space • allow microphone access</div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const mic = $('mic'), status = $('status'), message = $('message'), input = $('text');
+    let recognition, listening = false;
+    function setListening(value) { listening = value; mic.classList.toggle('listening', value); status.textContent = value ? 'listening' : 'ready'; }
+    async function health() {
+      try { const r = await fetch('/api/health'); if (!r.ok) throw Error(); $('dot').classList.remove('offline'); $('online').textContent='online'; }
+      catch { $('online').textContent='offline'; }
+    }
+    async function ask(text) {
+      if (!text.trim()) return;
+      setListening(false); status.textContent='thinking'; message.textContent='…';
+      try {
+        const r = await fetch('/api/chat/text', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:text.trim(),session_id:'island'})});
+        const data = await r.json(); if (!r.ok) throw Error(data.detail || 'Request failed');
+        message.textContent = data.response || 'I have no response.'; status.textContent='ready';
+        if ('speechSynthesis' in window) { speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(data.response || ''); utterance.rate=.98; speechSynthesis.speak(utterance); }
+      } catch (error) { status.textContent='offline'; message.textContent=error.message || 'JARVIS is unavailable.'; }
+    }
+    function setupSpeech() {
+      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Speech) { status.textContent='type or use voice CLI'; return; }
+      recognition = new Speech(); recognition.lang='en-GB'; recognition.interimResults=false; recognition.continuous=false;
+      recognition.onstart=()=>setListening(true); recognition.onend=()=>setListening(false);
+      recognition.onerror=event=>{setListening(false); message.textContent=event.error==='not-allowed'?'Microphone permission is required.':'I did not catch that.';};
+      recognition.onresult=event=>ask(event.results[0][0].transcript);
+    }
+    mic.onclick=()=>{ if (recognition) { if (listening) recognition.stop(); else recognition.start(); } else input.focus(); };
+    $('composer').onsubmit=event=>{event.preventDefault(); const text=input.value; input.value=''; ask(text);};
+    document.onkeydown=event=>{ if (event.code==='Space' && document.activeElement!==input) {event.preventDefault(); mic.click();} };
+    setupSpeech(); health(); setInterval(health,15000);
+  </script>
+</body>
+</html>

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+from zoneinfo import ZoneInfo
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -14,19 +16,13 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BRIEF_CONFIG_PATH = PROJECT_ROOT / "data" / "brief_config.json"
-DEFAULT_TASKS = [
-    "5 job applications",
-    "Rasylon emails",
-    "JARVIS Sprint 2",
-    "20 pages reading",
-    "Linear algebra",
-]
 
 
-async def get_morning_brief() -> str:
-    now = datetime.now()
+
+async def get_morning_brief(owner_id: str | None = None) -> str:
+    now = datetime.now(ZoneInfo(os.getenv("JARVIS_TIMEZONE", "Europe/London")))
     config = load_brief_config()
-    tasks = config.get("daily_tasks") or DEFAULT_TASKS
+    tasks = config.get("daily_tasks") or []
 
     greeting = _time_greeting(now)
     date_str = now.strftime("%a %d %b")
@@ -34,7 +30,11 @@ async def get_morning_brief() -> str:
     calendar = get_today_event_summary(now, compact=True)
     task_str = _format_tasks([_compact_task(str(task)) for task in tasks])
 
-    return f"{greeting} {date_str}. {weather}. Calendar: {calendar}. Focus: {task_str}."
+    schedule_summary = ""
+    if owner_id is not None:
+        from app.scheduling.service import get_service
+        schedule_summary = " " + get_service().brief_summary(owner_id)
+    return f"{greeting} {date_str}. {weather}. Calendar: {calendar}. Focus: {task_str}.{schedule_summary}"
 
 
 def load_brief_config(path: Path = BRIEF_CONFIG_PATH) -> dict[str, Any]:
@@ -43,10 +43,10 @@ def load_brief_config(path: Path = BRIEF_CONFIG_PATH) -> dict[str, Any]:
             data = json.load(config_file)
     except (OSError, json.JSONDecodeError) as exc:
         logger.error("Brief config unavailable: %s", exc)
-        return {"daily_tasks": DEFAULT_TASKS, "location": "London", "wake_time": "05:30"}
+        return {"daily_tasks": [], "location": "London", "wake_time": "05:30"}
 
     if not isinstance(data, dict):
-        return {"daily_tasks": DEFAULT_TASKS, "location": "London", "wake_time": "05:30"}
+        return {"daily_tasks": [], "location": "London", "wake_time": "05:30"}
     return data
 
 

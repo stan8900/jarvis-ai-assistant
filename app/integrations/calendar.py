@@ -10,6 +10,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class CalendarUnavailable(RuntimeError):
+    pass
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CALENDAR_PATH = PROJECT_ROOT / "data" / "calendar" / "events.json"
 
@@ -24,7 +28,10 @@ class CalendarEvent:
 
 async def get_today_calendar(now: datetime | None = None) -> str:
     current = now or datetime.now()
-    events = get_events_for_date(current.date())
+    try:
+        events = get_events_for_date(current.date(), strict=True)
+    except CalendarUnavailable:
+        return "Your local calendar is unavailable, sir."
     if not events:
         return "Your calendar is clear today, sir."
 
@@ -34,7 +41,10 @@ async def get_today_calendar(now: datetime | None = None) -> str:
 
 def get_today_event_summary(now: datetime | None = None, compact: bool = False) -> str:
     current = now or datetime.now()
-    events = get_events_for_date(current.date())
+    try:
+        events = get_events_for_date(current.date(), strict=True)
+    except CalendarUnavailable:
+        return "calendar unavailable"
     if not events:
         return "calendar clear"
     if compact:
@@ -42,29 +52,42 @@ def get_today_event_summary(now: datetime | None = None, compact: bool = False) 
     return ", ".join(_format_event(event, include_sir=False) for event in events)
 
 
-def get_events_for_date(target_date: date) -> list[CalendarEvent]:
-    events = _load_events()
+def get_events_for_date(target_date: date, strict: bool = False) -> list[CalendarEvent]:
+    events = _load_events(strict=strict)
     todays_events = [event for event in events if event.event_date == target_date]
     return sorted(todays_events, key=lambda event: event.start_time or "99:99")
 
 
-def _load_events(path: Path = CALENDAR_PATH) -> list[CalendarEvent]:
+def _load_events(path: Path | None = None, strict: bool = False) -> list[CalendarEvent]:
+    path = path or CALENDAR_PATH
     try:
         with path.open("r", encoding="utf-8") as calendar_file:
             payload = json.load(calendar_file)
     except (OSError, json.JSONDecodeError) as exc:
         logger.error("Calendar file unavailable: %s", exc)
+        if strict:
+            raise CalendarUnavailable("The legacy calendar file is unavailable or invalid.") from None
         return []
 
     raw_events = payload.get("events") if isinstance(payload, dict) else []
     if not isinstance(raw_events, list):
+        if strict:
+            raise CalendarUnavailable("The legacy calendar file has an invalid events list.")
         return []
 
     events = []
     for item in raw_events:
         event = _parse_event(item)
         if event is not None:
+            if strict and (
+                (item.get('start_time') and event.start_time is None)
+                or (item.get('end_time') and event.end_time is None)
+                or (event.start_time and event.end_time and event.end_time <= event.start_time)
+            ):
+                raise CalendarUnavailable("The legacy calendar contains an invalid time range.")
             events.append(event)
+        elif strict:
+            raise CalendarUnavailable("The legacy calendar contains an invalid event.")
     return events
 
 

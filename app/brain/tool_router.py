@@ -20,7 +20,11 @@ class ToolRouter:
         self,
         message: str,
         long_term_memory: LongTermMemory | None = None,
+        owner_id: str | None = None,
     ) -> ToolResult | None:
+        from app.scheduling.parser import detect
+        if detect(message) is not None:
+            return ToolResult(name="scheduling", content="Use the authenticated /api/schedule/text endpoint for scheduling commands; scheduling requires the configured Bearer token.")
         normalized = self._normalize(message)
 
         remember_fact = self._extract_remember_fact(normalized)
@@ -44,7 +48,7 @@ class ToolRouter:
         if self._is_weather_request(normalized):
             return ToolResult(name="weather", content=await get_weather())
         if self._is_morning_brief_request(normalized):
-            return ToolResult(name="morning_brief", content=await get_morning_brief())
+            return ToolResult(name="morning_brief", content=await get_morning_brief(owner_id=owner_id))
         if self._is_calendar_request(normalized):
             return ToolResult(name="calendar", content=await get_today_calendar())
         search_query = self._extract_search_query(normalized)

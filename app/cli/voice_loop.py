@@ -6,6 +6,8 @@ import tempfile
 import time
 import wave
 from pathlib import Path
+from uuid import uuid4
+from app.scheduling.client import scheduling_headers, poll_notifications
 
 os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
 
@@ -116,11 +118,13 @@ def post_audio(
     user_id: str,
     timeout_seconds: float,
 ) -> dict:
+    headers = scheduling_headers(api_url)
+    headers['Idempotency-Key'] = uuid4().hex
     with open(wav_path, "rb") as audio_file:
         files = {"audio": ("speech.wav", audio_file, "audio/wav")}
         data = {"session_id": session_id, "user_id": user_id}
         with httpx.Client(timeout=timeout_seconds) as client:
-            response = client.post(api_url, data=data, files=files)
+            response = client.post(api_url, data=data, files=files, headers=headers)
 
     response.raise_for_status()
     return response.json()
@@ -169,6 +173,7 @@ def run_loop(args: argparse.Namespace) -> None:
     while True:
         wav_path = ""
         try:
+            poll_notifications(args.api_url)
             audio = record_until_silence(
                 sample_rate=args.sample_rate,
                 channels=args.channels,

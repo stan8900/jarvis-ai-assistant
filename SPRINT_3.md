@@ -28,10 +28,10 @@ Jarvis, help me plan today around my calendar and job applications.
 
 Status: Done
 
-JARVIS now routes normal conversation across three brain tiers:
+JARVIS now routes normal conversation across two active brain tiers:
 
-- `claude` for complex reasoning, interviews, career advice, strategy, and planning.
-- `openai` for drafting, writing, email, and creative work.
+- `openai` for complex reasoning, interviews, career advice, strategy, planning,
+  drafting, writing, email, and creative work.
 - `ollama` for local fallback and self-hosted operation when API keys are unavailable.
 
 Tool responses still bypass external providers and return immediately as
@@ -41,10 +41,8 @@ brief, memory, calendar, and IDE commands.
 Environment:
 
 ```text
-ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...
-JARVIS_DEFAULT_BRAIN=claude
-JARVIS_ANTHROPIC_MODEL=claude-sonnet-4-6
+JARVIS_DEFAULT_BRAIN=openai
 JARVIS_OPENAI_MODEL=gpt-4o-mini
 ```
 
